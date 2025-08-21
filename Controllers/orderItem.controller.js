@@ -20,7 +20,7 @@ export const createOrderItem = async (req, res) => {
       order: orderId,
       item: itemId,
       quantity,
-      createdBy: req.user.id,
+      createdBy: req.user._id,
     });
 
     await Item.findByIdAndUpdate(itemId, { $inc: { quantity: -quantity } });

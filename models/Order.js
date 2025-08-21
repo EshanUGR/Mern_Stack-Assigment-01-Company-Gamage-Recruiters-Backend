@@ -5,13 +5,13 @@ const orderSchema = new mongoose.Schema(
     _id: { type: String, required: true }, // Manual order ID
     orderDate: { type: Date, default: Date.now },
     customer: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: String,
       ref: "Customer",
       required: true,
     },
-    totalValue: { type: Number, required: true },
-    discountAmount: { type: Number, default: 0 },
-    finalAmount: { type: Number, required: true },
+    totalValue: { type: Number, required: true }, // calculated from order items
+    discountPercent: { type: Number, default: 0 }, // percentage entered by shop owner
+    finalAmount: { type: Number, required: true }, // calculated total - discount
     status: {
       type: String,
       enum: ["pending", "completed", "cancelled"],
@@ -21,17 +21,9 @@ const orderSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
-    }, // user who created the order
-    notes: { type: String }, // Optional notes for order
+    },
   },
   { timestamps: true }
 );
 
-// Pre-save hook to ensure finalAmount is always correct
-orderSchema.pre("save", function (next) {
-  this.finalAmount = this.totalValue - (this.discountAmount || 0);
-  next();
-});
-
-const Order = mongoose.model("Order", orderSchema);
-export default Order;
+export default mongoose.model("Order", orderSchema);
