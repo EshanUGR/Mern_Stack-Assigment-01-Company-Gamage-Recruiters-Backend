@@ -1,123 +1,127 @@
-import OrderItem from "../models/OrderItem.js";
-
+// controllers/orderItem.controller.js
+import OrderItem from "../models/OrderItem.js"
 import Item from "../models/Item.js";
-
-
 import { errorHandler } from "../utils/error.js";
 
-
-// Create a single order item
-export const createOrderItem = async (req, res) => {
+// ✅ Create Order Item
+export const createOrderItem = async (req, res, next) => {
   try {
-    const { _id, orderId, itemId, quantity } = req.body;
+    const { order, item, quantity } = req.body;
 
-    const itemData = await Item.findById(itemId);
-    if (!itemData) return res.status(404).json({ message: "Item not found" });
-    if (quantity > itemData.quantity) return res.status(400).json({ message: "Not enough stock" });
+    if (!order || !item || !quantity) {
+      return next(errorHandler(400, "Order, Item, and Quantity are required"));
+    }
+
+    // check if item exists
+    const itemData = await Item.findById(item);
+    if (!itemData) {
+      return next(errorHandler(404, "Item not found"));
+    }
 
     const orderItem = await OrderItem.create({
-      _id,
-      order: orderId,
-      item: itemId,
+      order,
+      item,
+      itemName: itemData.name,
       quantity,
-      createdBy: req.user._id,
+      createdBy: req.user._id, // ✅ fix here
     });
 
-    await Item.findByIdAndUpdate(itemId, { $inc: { quantity: -quantity } });
-
-    res.status(201).json(orderItem);
+    res.status(201).json({
+      success: true,
+      message: "Order Item created successfully",
+      data: orderItem,
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
-
-
-
-// Get all order items
-export const getOrderItems = async (req, res) => {
+// ✅ Get all Order Items
+export const getOrderItems = async (req, res, next) => {
   try {
-    const items = await OrderItem.find()
-      .populate("item")
+    const orderItems = await OrderItem.find()
       .populate("order")
-      .populate("createdBy");
-    res.json(items);
+      .populate("item");
+
+    res.status(200).json({
+      success: true,
+      data: orderItems,
+    });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
 
-
-
-// Get order item by ID
-export const getOrderItemById = async (req, res) => {
+// ✅ Get Single Order Item
+export const getOrderItemById = async (req, res, next) => {
   try {
-    const item = await OrderItem.findById(req.params.id)
-      .populate("item")
+    const orderItem = await OrderItem.findById(req.params.id)
       .populate("order")
-      .populate("createdBy");
-    if (!item) return res.status(404).json({ message: "Order item not found" });
-    res.json(item);
+      .populate("item");
+
+    if (!orderItem) {
+      return next(errorHandler(404, "Order Item not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: orderItem,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ✅ Update Order Item
+// Update Order
+export const updateOrderItem = async (req, res) => {
+  try {
+    const { discountPercent, status, customer, totalValue } = req.body;
+
+    // Find order by ID
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    // ✅ Update only if user provided values, otherwise keep old ones
+    order.discountPercent = discountPercent !== undefined ? discountPercent : order.discountPercent;
+    order.status = status !== undefined ? status : order.status;
+    order.customer = customer !== undefined ? customer : order.customer;
+    order.totalValue = totalValue !== undefined ? totalValue : order.totalValue;
+
+    // ✅ Recalculate finalAmount if discountPercent or totalValue is updated
+    if (discountPercent !== undefined || totalValue !== undefined) {
+      order.finalAmount = order.totalValue - (order.totalValue * order.discountPercent) / 100;
+    }
+
+    // Save updated order
+    await order.save();
+
+    res.status(200).json({
+      message: "Order updated successfully",
+      order,
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
 
-
-
-
-
-export const updateOrderItem = async (req, res, next) => {
+// ✅ Delete Order Item
+export const deleteOrderItem = async (req, res, next) => {
   try {
-    const { id } = req.params; // OrderItem _id
-    const { quantity } = req.body;
+    const orderItem = await OrderItem.findByIdAndDelete(req.params.id);
 
-    // Find the order item created by this user
-    const orderItem = await OrderItem.findOne({
-      _id: id,
-      createdBy: req.user._id,
+    if (!orderItem) {
+      return next(errorHandler(404, "Order Item not found"));
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Order Item deleted successfully",
     });
-
-    if (!orderItem)
-      return next(errorHandler(404, "Order item not found or not authorized"));
-
-    // Validate stock
-    const itemData = await Item.findById(orderItem.item);
-    if (!itemData) return next(errorHandler(404, "Item not found"));
-
-    if (quantity > itemData.quantity + orderItem.quantity)
-      return next(errorHandler(400, `Not enough stock for ${itemData.name}`));
-
-    // Adjust stock: add back old quantity, subtract new quantity
-    const stockChange = orderItem.quantity - quantity;
-    await Item.findByIdAndUpdate(orderItem.item, {
-      $inc: { quantity: stockChange },
-    });
-
-    // Update the quantity in OrderItem
-    orderItem.quantity = quantity;
-    await orderItem.save();
-
-    res
-      .status(200)
-      .json({ message: "Order item updated successfully", orderItem });
   } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-};
-
-
-
-
-
-// Delete order item
-export const deleteOrderItem = async (req, res) => {
-  try {
-    const item = await OrderItem.findByIdAndDelete(req.params.id);
-    if (!item) return res.status(404).json({ message: "Order item not found" });
-    res.json({ message: "Order item deleted" });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
