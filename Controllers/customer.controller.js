@@ -5,6 +5,9 @@ import { errorHandler } from "../utils/error.js";
 export const createCustomer = async (req, res) => {
   try {
     const { _id, name, NIC, address, contactNo } = req.body;
+    if (!_id || !name || !NIC || !address || !contactNo) {
+      return next(errorHandler(400, "All details are required"));
+    }
 
     const newCustomer = new Customer({
       _id,
@@ -18,9 +21,6 @@ export const createCustomer = async (req, res) => {
 
     await newCustomer.save();
 
-    if (!_id || !name || !NIC || !address || !contactNo) {
-      return next(errorHandler(400, "All details are required"));
-     }
 
 
     res.status(201).json({
