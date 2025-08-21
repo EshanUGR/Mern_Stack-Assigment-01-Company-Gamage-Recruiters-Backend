@@ -1,10 +1,10 @@
-import Order from "../models/Order";
+import Order from "../models/Order.js";
 
-import OrderItem from "../models/OrderItem";
+import OrderItem from "../models/OrderItem.js";
 
-import Item from "../models/Item";
+import Item from "../models/Item.js";
 
-import {errorHandler} from "../utils/errorHandler.js";
+import { errorHandler } from "../utils/error.js";
 
 
 
@@ -97,11 +97,7 @@ export const getOrderById = async (req, res) => {
 };
 
 
-// Update order
-import Order from "../models/Order.js";
-import OrderItem from "../models/OrderItem.js";
-import Item from "../models/Item.js";
-import { errorHandler } from "../utils/error.js";
+
 
 export const updateOrder = async (req, res, next) => {
   try {

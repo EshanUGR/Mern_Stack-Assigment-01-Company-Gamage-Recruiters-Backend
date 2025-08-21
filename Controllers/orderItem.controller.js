@@ -1,9 +1,9 @@
-import OrderItem from "../models/OrderItem";
+import OrderItem from "../models/OrderItem.js";
 
-import Item from "../models/Item";
+import Item from "../models/Item.js";
 
 
-import { errorHandler } from "../utils/error";
+import { errorHandler } from "../utils/error.js";
 
 
 // Create a single order item

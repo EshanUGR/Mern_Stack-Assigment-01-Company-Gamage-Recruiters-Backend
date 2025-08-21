@@ -6,6 +6,9 @@ import authRouter from "./routes/auth.route.js";
 import customerRouter from "./routes/customer.route.js";
 import itemRouter from "./routes/item.route.js";
 
+import orderRouter from "./routes/order.route.js";
+import orderItemRouter from "./routes/orderItem.route.js";
+
 import cookieParser from "cookie-parser";
 dotenv.config();
 
@@ -39,6 +42,8 @@ mongoose
 app.use("/api/auth", authRouter);
 app.use("/api/customers", customerRouter);
 app.use("/api/items", itemRouter);
+app.use("/api/orders", orderRouter);
+app.use("/api/order-items", orderItemRouter);
 
 
 
