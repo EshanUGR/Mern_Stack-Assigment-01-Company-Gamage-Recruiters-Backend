@@ -4,6 +4,7 @@ import express from "express";
 import mongoose from "mongoose";
 import authRouter from "./routes/auth.route.js";
 import customerRouter from "./routes/customer.route.js";
+import itemRouter from "./routes/item.route.js";
 
 import cookieParser from "cookie-parser";
 dotenv.config();
@@ -37,3 +38,7 @@ mongoose
   //auth routes signin and signup
 app.use("/api/auth", authRouter);
 app.use("/api/customers", customerRouter);
+app.use("/api/items", itemRouter);
+
+
+
