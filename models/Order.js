@@ -9,6 +9,17 @@ const orderSchema = new mongoose.Schema(
       ref: "Customer",
       required: true,
     },
+    items: [
+      {
+        itemId: {
+          type: String,
+          ref: "Item",
+          required: true,
+        },
+        quantity: { type: Number, default: 1 },
+        price: { type: Number, required: true }, // price at time of order
+      },
+    ],
     totalValue: { type: Number, required: true }, // calculated from order items
     discountPercent: { type: Number, default: 0 }, // percentage entered by shop owner
     finalAmount: { type: Number, required: true }, // calculated total - discount

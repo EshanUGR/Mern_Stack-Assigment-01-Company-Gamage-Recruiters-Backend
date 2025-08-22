@@ -2,7 +2,7 @@ import Customer from "../models/Customer.js";
 import { errorHandler } from "../utils/error.js";
 
 
-export const createCustomer = async (req, res) => {
+export const createCustomer = async (req, res,next) => {
   try {
     const { _id, name, NIC, address, contactNo } = req.body;
     if (!_id || !name || !NIC || !address || !contactNo) {

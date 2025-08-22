@@ -35,6 +35,7 @@ export const signup = async (req, res, next) => {
 
     // Generate JWT token and set cookie
     const restToken = generateTokenAndSetCookie(res, newUser._id);
+    
 res.status(201).json({
   success: true,
   message: "User created successfully!",
@@ -56,36 +57,70 @@ res.status(201).json({
   }
 };
 
+
 export const signin = async (req, res, next) => {
   const { email, password } = req.body;
 
   try {
-    // Check if the user exists
-    const validUser = await User.findOne({ email: email });
+    // 1. Check if user exists
+    const validUser = await User.findOne({ email });
     if (!validUser) return next(errorHandler(404, "User not found!"));
 
-    // Compare passwords
+    // 2. Validate password
     const validPassword = bcryptjs.compareSync(password, validUser.password);
     if (!validPassword) return next(errorHandler(401, "Wrong credentials!"));
 
-    // Generate JWT token
-    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET, {
-      expiresIn: "1h", // Optional: Add expiration time for security
-    });
+    // 3. Generate JWT token
+    const token = jwt.sign(
+      { userId: validUser._id.toString() }, // always store string
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
 
-    // Exclude password from the response
+    // 4. Remove password from user object
     const { password: pass, ...rest } = validUser.toObject();
 
-    // Send the token as an HTTP-only cookie and respond with user data
+    // 5. Set token in cookie + return user
     res
       .cookie("access_token", token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "production", // Must be true in production (HTTPS required)
-        sameSite: "strict", // Protects against CSRF
+        secure: process.env.NODE_ENV === "production", // only https in prod
+        sameSite: process.env.NODE_ENV === "production" ? "None" : "Lax",
+        maxAge: 60 * 60 * 1000, // 1h in ms
+        path: "/", // cookie is valid for all routes
       })
       .status(200)
-      .json(rest);
+      .json({
+        success: true,
+        message: "Login successful",
+        user: rest, // return safe user data
+      });
   } catch (error) {
+    console.error("Signin error:", error);
     next(error);
+  }
+};
+
+
+
+export const checkAuth = async (req, res, next) => {
+  try {
+    console.log("Checking auth for user:", req.user);
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      console.log("User not found");
+      return next(errorHandler(401, "User not authenticated"));
+    }
+
+    console.log("User found:", user);
+    res.status(200).json({
+      success: true,
+      user,
+    });
+  } catch (error) {
+    console.log("Error checking auth:", error);
+    return next(
+      errorHandler(500, "Server error while checking authentication")
+    );
   }
 };

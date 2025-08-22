@@ -6,6 +6,10 @@ import Item from "../models/Item.js";
 
 import { errorHandler } from "../utils/error.js";
 
+
+// Create Order
+
+
 export const createOrder = async (req, res) => {
   try {
     const { _id, customerId, items, discountPercent } = req.body;
@@ -16,9 +20,10 @@ export const createOrder = async (req, res) => {
         .json({ message: "Order ID, customer, and items are required" });
     }
 
+    let orderItems = [];
     let totalValue = 0;
 
-    // Calculate total value from quantity × item price
+    // Process each item
     for (const i of items) {
       const itemData = await Item.findById(i.itemId);
       if (!itemData)
@@ -29,89 +34,110 @@ export const createOrder = async (req, res) => {
           .status(400)
           .json({ message: `Not enough stock for ${itemData.name}` });
 
+      // Calculate total
       totalValue += itemData.price * i.quantity;
+
+      // Push to order items array
+      orderItems.push({
+        itemId: itemData._id, // store as ObjectId for populate()
+        quantity: i.quantity,
+        name: itemData.name,
+        price: itemData.price,
+      });
+
+      // Reduce stock
+      await Item.findByIdAndUpdate(i.itemId, {
+        $inc: { quantity: -i.quantity },
+      });
     }
 
-    // Calculate final amount after discount
+    // Final amount after discount
     const finalAmount =
       totalValue - (totalValue * (discountPercent || 0)) / 100;
 
-    // Create Order
+    // Create order
     const order = await Order.create({
       _id,
       customer: customerId,
+      items: orderItems,
       totalValue,
       discountPercent,
       finalAmount,
       createdBy: req.user._id,
     });
 
-    // Create order items
-    for (const i of items) {
-      const itemData = await Item.findById(i.itemId);
-      await OrderItem.create({
-        order: order._id,
-        item: i.itemId,
-        itemName: itemData.name,
-        quantity: i.quantity,
-        price: itemData.price,
-        createdBy: req.user._id,
-      });
+    // Populate items for response
+    const populatedOrder = await Order.findById(order._id)
+      .populate("customer")
+      .populate("items.itemId")
+      .populate("createdBy");
 
-      // Optional: reduce stock
-      await Item.findByIdAndUpdate(i.itemId, {
-        $inc: { quantity: -i.quantity },
-      });
-    }
-
-    res.status(201).json({ message: "Order created successfully", order });
+    res.status(201).json({
+      message: "Order created successfully",
+      order: populatedOrder,
+    });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
   }
 };
-// Get all orders
-// GET ALL ORDERS
+
+// Get All Orders
 export const getOrders = async (req, res) => {
   try {
+    // Fetch orders with customer and createdBy populated
     const orders = await Order.find()
       .populate("customer")
       .populate("createdBy");
-    res.status(200).json(orders);
+
+    // Map each order to include all its order items in a single array
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const orderItems = await OrderItem.find({ order: order._id }).select(
+          "itemId itemName quantity price"
+        );
+
+        return {
+          ...order.toObject(),
+          items: orderItems, // all items of this order
+        };
+      })
+    );
+
+    res.status(200).json(ordersWithItems);
   } catch (err) {
+    console.error(err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// Get order by ID with items
 
-// GET SINGLE ORDER
+
+// Get Single Order
 export const getOrderById = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id)
       .populate("customer")
+      .populate("items.itemId")
       .populate("createdBy");
+
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    const orderItems = await OrderItem.find({ order: order._id }).populate(
-      "item"
-    );
-    res.status(200).json({ order, orderItems });
+    res.status(200).json(order);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
+// Update Order (only discountPercent)
 export const updateOrder = async (req, res) => {
   try {
-    const { discountPercent } = req.body; // Only get discountPercent from user
+    const { discountPercent } = req.body;
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Update discountPercent only if provided
     if (discountPercent !== undefined) {
       order.discountPercent = discountPercent;
-      // Recalculate finalAmount
       order.finalAmount =
         order.totalValue - (order.totalValue * discountPercent) / 100;
     }
@@ -123,20 +149,17 @@ export const updateOrder = async (req, res) => {
   }
 };
 
-// Delete order and its items
-// DELETE ORDER
+// Delete Order
 export const deleteOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
 
-    // Delete all order items
-    await OrderItem.deleteMany({ order: order._id });
-
     // Restore stock
-    const orderItems = await OrderItem.find({ order: order._id });
-    for (const i of orderItems) {
-      await Item.findByIdAndUpdate(i.item, { $inc: { quantity: i.quantity } });
+    for (const i of order.items) {
+      await Item.findByIdAndUpdate(i.itemId, {
+        $inc: { quantity: i.quantity },
+      });
     }
 
     await order.deleteOne();
