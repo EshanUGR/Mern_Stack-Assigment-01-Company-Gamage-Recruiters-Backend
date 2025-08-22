@@ -83,23 +83,33 @@ export const createOrder = async (req, res) => {
 };
 
 // Get All Orders
-export const getOrders = async (req, res) => {
+
+export const getOrders = async (req, res, next) => {
   try {
     // Fetch orders with customer and createdBy populated
     const orders = await Order.find()
-      .populate("customer")
-      .populate("createdBy");
+      .populate("customer", "name email")
+      .populate("createdBy", "name")
+      .lean();
 
-    // Map each order to include all its order items in a single array
+    // For each order, get the name of each item from Item model
     const ordersWithItems = await Promise.all(
       orders.map(async (order) => {
-        const orderItems = await OrderItem.find({ order: order._id }).select(
-          "itemId itemName quantity price"
+        const itemsWithNames = await Promise.all(
+          order.items.map(async (orderItem) => {
+            const item = await Item.findById(orderItem.itemId).lean();
+            return {
+              ...orderItem,
+              name: item?.name || "Unknown",
+              price: item?.price || 0,
+              total: (item?.price || 0) * orderItem.quantity,
+            };
+          })
         );
 
         return {
-          ...order.toObject(),
-          items: orderItems, // all items of this order
+          ...order,
+          items: itemsWithNames,
         };
       })
     );
@@ -107,10 +117,9 @@ export const getOrders = async (req, res) => {
     res.status(200).json(ordersWithItems);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: err.message });
+    next(err);
   }
 };
-
 
 
 // Get Single Order
