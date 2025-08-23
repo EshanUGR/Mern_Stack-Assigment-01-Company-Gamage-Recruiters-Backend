@@ -87,7 +87,8 @@ export const createOrder = async (req, res) => {
 export const getOrders = async (req, res, next) => {
   try {
     // Fetch orders with customer and createdBy populated
-    const orders = await Order.find()
+        
+    const orders = await Order.find({ createdBy: req.user._id })
       .populate("customer", "name email")
       .populate("createdBy", "name")
       .lean();
