@@ -18,21 +18,29 @@ export const createCustomer = async (req, res,next) => {
       createdBy: req.user._id, // link to logged-in user
     });
 
-
     await newCustomer.save();
-
-
 
     res.status(201).json({
       success: true,
       message: "Customer created successfully!",
       customer: newCustomer,
     });
-  } catch (error) {
-    console.error("Create Customer Error:", error);
+  }  catch (error) {
+    if (error.name === "ValidationError") {
+      // Format errors as { field: message }
+      const errors = {};
+      Object.keys(error.errors).forEach((key) => {
+        errors[key] = error.errors[key].message;
+      });
+      return res.status(400).json({
+        message: "Validation Error",
+        errors: errors,
+      });
+    }
     next(error);
   }
 };
+
 
 
 

@@ -5,6 +5,8 @@ import OrderItem from "../models/OrderItem.js";
 import Item from "../models/Item.js";
 
 import { errorHandler } from "../utils/error.js";
+import OrderHistory from "../models/orderHistory.js";
+import Customer from "../models/Customer.js";
 
 
 // Create Order
@@ -111,6 +113,10 @@ export const getOrders = async (req, res, next) => {
         return {
           ...order,
           items: itemsWithNames,
+          orderDate: new Date(order.orderDate).toISOString().split("T")[0],
+          status:
+            order.status.charAt(0).toUpperCase() +
+            order.status.slice(1).toLowerCase(),
         };
       })
     );
@@ -164,6 +170,21 @@ export const deleteOrder = async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ message: "Order not found" });
+    // get customer details
+    const customer = await Customer.findById(order.customer);
+
+    await OrderHistory.create({
+      originalOrderId: order._id,
+      orderDate: order.orderDate,
+      customerId: order.customer,
+      customerName: customer ? customer.name : "Unknown", // snapshot
+      items: order.items,
+      totalValue: order.totalValue,
+      discountPercent: order.discountPercent,
+      finalAmount: order.finalAmount,
+      status: order.status,
+      createdBy: order.createdBy,
+    });
 
     // Restore stock
     for (const i of order.items) {
@@ -176,5 +197,27 @@ export const deleteOrder = async (req, res) => {
     res.status(200).json({ message: "Order deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+
+// Update order status
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    if (!["pending", "completed", "cancelled"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const order = await Order.findById(req.params.id);
+    if (!order) return res.status(404).json({ message: "Order not found" });
+
+    order.status = status;
+    await order.save();
+
+    res.json({ message: `Order marked as ${status}`, order });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating status", error });
   }
 };

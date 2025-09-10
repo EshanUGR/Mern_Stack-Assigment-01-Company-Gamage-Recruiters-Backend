@@ -5,7 +5,9 @@ createOrder,
 getOrders,
 getOrderById,
 updateOrder,
-deleteOrder
+deleteOrder,
+updateOrderStatus
+
 }
 from "../Controllers/order.controller.js"
 
@@ -20,5 +22,6 @@ router.get("/", verifyToken, getOrders);
 router.get("/:id", verifyToken, getOrderById); 
 router.put("/:id", verifyToken, updateOrder); // Update order
 router.delete("/:id", verifyToken, deleteOrder); // Delete order
+router.put("/:id/status", updateOrderStatus);
 
 export default router;

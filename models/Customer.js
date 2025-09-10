@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 
 const customerSchema = new mongoose.Schema(
   {
-    _id: { type: String, required: true }, // manual id
+    _id: { type: String, required: true }, 
     name: { type: String, required: true, trim: true },
     NIC: {
       type: String,
@@ -10,7 +10,7 @@ const customerSchema = new mongoose.Schema(
       unique: true,
       match: [/^(?:[0-9]{9}[VXvx]|[0-9]{12})$/, "Invalid NIC format"],
     },
-    address: { type: String, required: true },
+    address: { type: String, required: true, trim: true },
     contactNo: { type: String, required: true, match: /^[0-9]{10}$/ },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,

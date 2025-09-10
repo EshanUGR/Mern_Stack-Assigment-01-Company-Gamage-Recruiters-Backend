@@ -2,13 +2,13 @@ import mongoose from "mongoose";
 
 const itemSchema = new mongoose.Schema(
   {
-    _id: { type: String, required: true }, // manual item id
+    _id: { type: String, required: true }, 
     name: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     quantity: { type: Number, required: true, min: 0 },
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "User", // reference to the user who created the item
+      ref: "User", 
       required: true,
     },
   },
