@@ -15,7 +15,7 @@ import dashRouter from "./routes/dash.route.js";
 dotenv.config();
 
 const app = express();
-
+//new
 // CORS configuration - fixed the typo and formatting
 app.use(
   cors({
