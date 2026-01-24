@@ -11,6 +11,7 @@ import cookieParser from "cookie-parser";
 import jwt from "jsonwebtoken"
 import { verifyToken } from "./utils/verifyToken.js";
 import dashRouter from "./routes/dash.route.js";
+import campginRouter from "./routes/campaign.routes.js" 
 
 dotenv.config();
 
@@ -102,3 +103,4 @@ app.use("/api/items", itemRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/order-items", orderItemRouter);
 app.use("/api/dashboard", dashRouter);
+app.use("/api/campaign", campginRouter);
