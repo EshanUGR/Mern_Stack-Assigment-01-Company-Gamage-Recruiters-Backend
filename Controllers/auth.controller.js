@@ -6,7 +6,7 @@ import { generateTokenAndSetCookie } from "../utils/generateTokenAndSetCookie.js
 
 export const signup = async (req, res, next) => {
   try {
-    const {name, email, password } = req.body;
+    const { name, email, password } = req.body;
 
     // Validate input fields
     if (!name || !email || !password) {
@@ -27,7 +27,6 @@ export const signup = async (req, res, next) => {
       name,
       email,
       password: hashedPassword,
-     
     });
 
     // Save user to the database
@@ -35,12 +34,12 @@ export const signup = async (req, res, next) => {
 
     // Generate JWT token and set cookie
     const restToken = generateTokenAndSetCookie(res, newUser._id);
-    
-res.status(201).json({
-  success: true,
-  message: "User created successfully!",
-  userId: newUser._id,
-});
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully!",
+      userId: newUser._id,
+    });
   } catch (error) {
     console.error("Signup Error:", error);
 
@@ -56,7 +55,6 @@ res.status(201).json({
     next(error);
   }
 };
-
 
 export const signin = async (req, res, next) => {
   const { email, password } = req.body;
@@ -74,7 +72,7 @@ export const signin = async (req, res, next) => {
     const token = jwt.sign(
       { userId: validUser._id.toString() }, // always store string
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      { expiresIn: "1h" },
     );
 
     // 4. Remove password from user object
@@ -93,6 +91,7 @@ export const signin = async (req, res, next) => {
       .json({
         success: true,
         message: "Login successful",
+        token,
         user: rest, // return safe user data
       });
   } catch (error) {
@@ -100,8 +99,6 @@ export const signin = async (req, res, next) => {
     next(error);
   }
 };
-
-
 
 export const checkAuth = async (req, res, next) => {
   try {
@@ -120,7 +117,7 @@ export const checkAuth = async (req, res, next) => {
   } catch (error) {
     console.log("Error checking auth:", error);
     return next(
-      errorHandler(500, "Server error while checking authentication")
+      errorHandler(500, "Server error while checking authentication"),
     );
   }
 };

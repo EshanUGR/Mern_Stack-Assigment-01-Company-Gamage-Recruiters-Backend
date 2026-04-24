@@ -8,10 +8,11 @@ import itemRouter from "./routes/item.route.js";
 import orderRouter from "./routes/order.route.js";
 import orderItemRouter from "./routes/orderItem.route.js";
 import cookieParser from "cookie-parser";
-import jwt from "jsonwebtoken"
+import jwt from "jsonwebtoken";
 import { verifyToken } from "./utils/verifyToken.js";
 import dashRouter from "./routes/dash.route.js";
-import campginRouter from "./routes/campaign.routes.js" 
+import campginRouter from "./routes/campaign.routes.js";
+import supplierLeadRouter from "./routes/supplierLead.route.js";
 
 dotenv.config();
 
@@ -24,63 +25,61 @@ app.use(
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"], // Fixed typo: ethods → methods
     allowedHeaders: ["Content-Type", "Authorization"],
-  })
+  }),
 );
 
 app.use(express.json()); // allows to parse incoming requests:req:body
 app.use(cookieParser());
 
-
 // Add debugging middleware here - after other middleware but before routes
 app.use((req, res, next) => {
-  console.log('=== Request Details ===');
-  console.log('URL:', req.url);
-  console.log('Method:', req.method);
-  console.log('Cookies:', req.cookies);
-  console.log('Auth Header:', req.headers.authorization);
-  console.log('=======================');
+  console.log("=== Request Details ===");
+  console.log("URL:", req.url);
+  console.log("Method:", req.method);
+  console.log("Cookies:", req.cookies);
+  console.log("Auth Header:", req.headers.authorization);
+  console.log("=======================");
   next();
 });
 
+app.get("/api/validate-token", verifyToken, (req, res) => {
+  res.json({
+    valid: true,
+    user: req.user,
+    message: "Token is valid",
+  });
+});
 
-  app.get("/api/validate-token", verifyToken, (req, res) => {
+app.get("/api/debug-token", (req, res) => {
+  const token = req.cookies.access_token;
+
+  if (!token) {
+    return res.json({ error: "No token found" });
+  }
+
+  // Add this to your server file, after your middleware but before your routes
+  app.get("/api/test-verify", verifyToken, (req, res) => {
     res.json({
-      valid: true,
+      success: true,
+      message: "Token verification successful!",
       user: req.user,
-      message: "Token is valid",
     });
   });
-
-  app.get("/api/debug-token", (req, res) => {
-    const token = req.cookies.access_token;
-
-    if (!token) {
-      return res.json({ error: "No token found" });
-    }
-
-    // Add this to your server file, after your middleware but before your routes
-    app.get("/api/test-verify", verifyToken, (req, res) => {
-      res.json({
-        success: true,
-        message: "Token verification successful!",
-        user: req.user,
-      });
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    res.json({
+      token: token,
+      decoded: decoded,
+      valid: true,
     });
-    try {
-      const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      res.json({
-        token: token,
-        decoded: decoded,
-        valid: true,
-      });
-    } catch (error) {
-      res.json({
-        token: token,
-        error: error.message,
-        valid: false,
-      });
-    }
-  });
+  } catch (error) {
+    res.json({
+      token: token,
+      error: error.message,
+      valid: false,
+    });
+  }
+});
 // Server listening
 app.listen(process.env.PORT, () => {
   console.log(`Server is running on port ${process.env.PORT}`);
@@ -104,3 +103,4 @@ app.use("/api/orders", orderRouter);
 app.use("/api/order-items", orderItemRouter);
 app.use("/api/dashboard", dashRouter);
 app.use("/api/campaign", campginRouter);
+app.use("/api/supplier-leads", supplierLeadRouter);
